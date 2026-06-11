@@ -24,6 +24,12 @@ class ScriptLine:
     def render(self) -> str:
         return f"[{self.t}] {self.text}"
 
+    @property
+    def seconds(self) -> float:
+        """The timestamp as seconds from the start of the clip."""
+        minutes, secs = self.t.split(":")
+        return int(minutes) * 60 + int(secs)
+
 
 def parse_script(text: str) -> list[ScriptLine]:
     """Parse script text into lines, ignoring blanks, comments, and stray prose.
