@@ -49,4 +49,8 @@ Two layers, kept separate:
 
 ## Status
 
-Phase 1 (scaffold) is in place: the CLI, config, persona resolution, the narration contract, and clear failures when ffmpeg or a required key is missing. The `draft` and `render` pipelines arrive in Phases 2 and 3 (see [SPEC.md](SPEC.md)).
+- Phase 1 (scaffold): done. CLI, config, persona resolution, narration contract, clear failures for missing ffmpeg/keys.
+- Phase 2 (draft): done. `draft` runs the hybrid pipeline (Gemini watches the clip once into a language-neutral `<clip>.beats.json`, then Claude writes the persona's thoughts into the editable `<clip>.<lang>.script.txt`). Re-run reuses the beat sheet; pass `--refresh-beats` to re-watch.
+- Phase 3 (render): still a stub.
+
+See [SPEC.md](SPEC.md) for the full plan.

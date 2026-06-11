@@ -1,8 +1,7 @@
 """Thoughtover command line: two commands, draft and render.
 
-Phase 1 ships these as stubs. They already accept --lang and --persona, load
-config from .env, resolve the persona, and run the same preflight checks the
-real pipeline will, so missing keys or ffmpeg fail clearly today.
+``draft`` runs the hybrid pipeline (Gemini beats -> Claude thoughts) and writes
+an editable script. ``render`` is still a Phase 3 stub.
 
 Core principle, enforced from the start: the agent drafts, you curate, your
 voice speaks. ``render`` only ever voices the edited script file; it must never
@@ -16,9 +15,11 @@ from typing import NoReturn
 
 import typer
 
+from .beats import read_beats, write_beats
 from .config import MissingConfigError, load_config
 from .personas import PersonaNotFoundError, load_persona
 from .preflight import FfmpegMissingError, preflight_draft, preflight_render
+from .script import parse_script, write_script_file
 
 app = typer.Typer(
     add_completion=False,
@@ -58,12 +59,21 @@ def draft(
     clip: Path = ClipArgument,
     lang: str = LangOption,
     persona: str = PersonaOption,
+    refresh_beats: bool = typer.Option(
+        False,
+        "--refresh-beats",
+        help="Re-watch the clip with Gemini even if a beat sheet already exists.",
+    ),
 ) -> None:
     """Draft an editable script from a clip (Gemini beats -> Claude thoughts).
 
-    Stub for Phase 1: validates the environment and resolves the persona, then
-    reports what it will produce. The real pipeline lands in Phase 2.
+    Gemini watches the clip once into a language-neutral beat sheet, then Claude
+    writes the thoughts from that sheet using the narration contract and the
+    selected persona. You then edit the script before rendering.
     """
+    from .claude import write_thoughts
+    from .gemini import generate_beats
+
     config = load_config()
     try:
         preflight_draft(config)
@@ -78,15 +88,34 @@ def draft(
     except PersonaNotFoundError as exc:
         _fail(str(exc))
 
-    beats, script, _ = _base_for(clip, lang)
-    typer.echo(f"draft (stub): {clip}")
-    typer.echo(f"  lang     : {lang}")
-    typer.echo(f"  persona  : {chosen.name} ({chosen.path})")
-    typer.echo(f"  gemini   : {config.gemini_model} @ {config.gemini_video_fps} FPS")
-    typer.echo(f"  claude   : {config.anthropic_model}")
-    typer.echo(f"  -> beats : {beats}  (language-neutral, shared)")
-    typer.echo(f"  -> script: {script}  (you edit this)")
-    typer.echo("draft pipeline not yet implemented (Phase 2).")
+    beats_path, script_path, _ = _base_for(clip, lang)
+
+    try:
+        if beats_path.is_file() and not refresh_beats:
+            typer.echo(f"reusing beat sheet: {beats_path} (pass --refresh-beats to re-watch)")
+            beats = read_beats(beats_path)
+        else:
+            beats = generate_beats(clip, config, log=typer.echo)
+            write_beats(beats_path, beats)
+            typer.echo(f"wrote beat sheet: {beats_path} ({len(beats)} beats)")
+
+        raw = write_thoughts(beats, chosen, lang, config, log=typer.echo)
+    except Exception as exc:  # noqa: BLE001 - surface a clean message, not a traceback
+        _fail(f"draft failed: {exc}")
+
+    lines = parse_script(raw)
+    if not lines:
+        _fail(
+            "The writer returned no usable `[mm:ss] thought` lines.\n"
+            "Re-run, or try a different --persona."
+        )
+
+    write_script_file(script_path, lines, clip_name=clip.name, lang=lang)
+    typer.echo(f"wrote script: {script_path} ({len(lines)} lines)")
+    typer.secho(
+        f"Now edit {script_path}, then run `thoughtover render {clip} --lang {lang}`.",
+        fg=typer.colors.GREEN,
+    )
 
 
 @app.command()
