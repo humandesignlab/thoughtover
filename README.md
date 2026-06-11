@@ -51,6 +51,6 @@ Two layers, kept separate:
 
 - Phase 1 (scaffold): done. CLI, config, persona resolution, narration contract, clear failures for missing ffmpeg/keys.
 - Phase 2 (draft): done. `draft` runs the hybrid pipeline (Gemini watches the clip once into a language-neutral `<clip>.beats.json`, then Claude writes the persona's thoughts into the editable `<clip>.<lang>.script.txt`). Re-run reuses the beat sheet; pass `--refresh-beats` to re-watch.
-- Phase 3 (render): still a stub.
+- Phase 3 (render): done. `render` voices each line of the edited script in your cloned voice (ElevenLabs), then with ffmpeg places each line at its timestamp, ducks the trail audio underneath (`NARRATION_DUCK_DB`), nudges overlaps apart, and muxes to `<clip>.<lang>.narrated.mp4`. Narration is modeled as a list of audio tracks so a second language appends rather than retrofits.
 
 See [SPEC.md](SPEC.md) for the full plan.

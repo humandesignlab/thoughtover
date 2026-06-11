@@ -15,6 +15,7 @@ __pycache__/
 *.beats.json
 *.script.txt
 *.narrated.mp4
+*.narration/
 
 # OS noise
 .DS_Store
