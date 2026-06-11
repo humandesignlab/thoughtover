@@ -126,29 +126,40 @@ def render(
 ) -> None:
     """Render the finished video from your edited script (ElevenLabs + ffmpeg).
 
-    Stub for Phase 1. render only ever voices the edited script file; it never
-    auto-voices fresh model output. The real pipeline lands in Phase 3.
+    Voices exactly the lines in the edited ``<clip>.<lang>.script.txt`` -- never
+    fresh model output -- then places each line at its timestamp, ducks the
+    trail audio underneath, and muxes to ``<clip>.<lang>.narrated.mp4``.
     """
+    from .render import render as run_render
+
     config = load_config()
     try:
         preflight_render(config)
     except (FfmpegMissingError, MissingConfigError) as exc:
         _fail(str(exc))
 
-    _, script, narrated = _base_for(clip, lang)
-    if not script.is_file():
+    if not clip.is_file():
+        _fail(f"Clip not found: {clip}")
+
+    _, script_path, narrated = _base_for(clip, lang)
+    if not script_path.is_file():
         _fail(
-            f"Edited script not found: {script}\n"
+            f"Edited script not found: {script_path}\n"
             f"Run `thoughtover draft {clip} --lang {lang}` first, then edit the script."
         )
 
-    typer.echo(f"render (stub): {clip}")
-    typer.echo(f"  lang     : {lang}")
-    typer.echo(f"  voice    : {config.elevenlabs_model} (voice id set)")
-    typer.echo(f"  duck     : {config.narration_duck_db} dB under narration")
-    typer.echo(f"  <- script: {script}  (the approved file, the only thing voiced)")
-    typer.echo(f"  -> video : {narrated}")
-    typer.echo("render pipeline not yet implemented (Phase 3).")
+    lines = parse_script(script_path.read_text(encoding="utf-8"))
+    if not lines:
+        _fail(f"No `[mm:ss] thought` lines found in {script_path}.")
+
+    narration_dir = Path(f"{clip.with_suffix('')}.{lang}.narration")
+    typer.echo(f"voicing {len(lines)} lines from {script_path} ({config.elevenlabs_model})")
+    try:
+        out = run_render(clip, lines, lang, narrated, narration_dir, config, log=typer.echo)
+    except Exception as exc:  # noqa: BLE001 - surface a clean message, not a traceback
+        _fail(f"render failed: {exc}")
+
+    typer.secho(f"Done. Wrote {out}", fg=typer.colors.GREEN)
 
 
 if __name__ == "__main__":
