@@ -1,0 +1,20 @@
+[project]
+name = "thoughtover"
+version = "0.1.0"
+description = "Turn a raw mountain bike clip into a finished video narrated in your cloned voice. An agent drafts, you curate, your voice speaks."
+readme = "README.md"
+requires-python = ">=3.11"
+dependencies = [
+    "typer>=0.12",
+    "pydantic-settings>=2.0",
+]
+
+[project.scripts]
+thoughtover = "thoughtover.cli:app"
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/thoughtover"]

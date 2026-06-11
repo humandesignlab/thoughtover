@@ -1,0 +1,20 @@
+# Secrets, never commit real keys
+.env
+
+# Private personas, never committed or shipped
+personas/local/
+
+# Python / uv
+.venv/
+__pycache__/
+*.py[cod]
+*.egg-info/
+.ruff_cache/
+
+# Generated pipeline outputs (live next to the source clip)
+*.beats.json
+*.script.txt
+*.narrated.mp4
+
+# OS noise
+.DS_Store
