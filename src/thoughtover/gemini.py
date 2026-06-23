@@ -28,12 +28,22 @@ Rules:
   "hear" is optional: include it only for a meaningful, non-ambient sound cue
   (a brake, a skid, tires on gravel, a bird, a sudden gust). Omit it otherwise.
 - "t" is the timestamp (mm:ss) measured from the start of the clip.
-- Describe concretely and neutrally what happens: terrain, obstacles, line
-  choices, riders, animals, scenery, effort. No narration, no first person, no
-  opinions, no voice. This sheet is language-neutral and reused across languages.
-- Treat speech as reliable; treat non-speech sound labels as approximate.
-- Be selective. One beat per notable moment a rider would actually react to,
-  not one per second. Prefer a sparse, high-signal sheet.
+- Describe each moment richly and specifically, not as a single bland label.
+  Capture the salient detail: terrain and obstacles, line choices, effort, and
+  especially people, animals, and interactions -- what they are doing, their
+  body language, how they react to the rider, and the apparent cause when it is
+  visibly supported. For example, prefer "a man pulls his leashed dog close and
+  grips its collar as it lunges and barks at the rider" over "a dog barks". Two
+  short sentences are fine when a moment earns it.
+- Stay neutral and observational: third person, no narration, no first person,
+  no opinions, no inner voice. This sheet is language-neutral and reused across
+  languages.
+- Describe only what is actually visible or audible. You may note an apparent
+  cause when the visuals support it, but do not invent intent, dialogue, or
+  detail you cannot see or hear. Treat speech as reliable; treat non-speech
+  sound labels as approximate.
+- Be selective about which moments you log -- the moments a rider would actually
+  react to, not one per second -- but describe each logged moment in full.
 
 Return only the JSON array, ordered by time.
 """
