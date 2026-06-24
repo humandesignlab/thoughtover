@@ -84,18 +84,9 @@ Two layers, kept separate:
 
 That split means a casually written persona still inherits the quality floor. `personas/default.en.md` ships as a plain template — copy it to make your own. Private personas go in `personas/local/`, which is gitignored, so your own detailed character is never committed; select it like any other (`--persona mine`), and a local file shadows a shipped one of the same name.
 
-## Bilingual (built English-first)
+## Bilingual (English-only for now)
 
-Built English-first but wired for more than one language from the start, so adding another language is a flag and a file, not a refactor.
-
-Principle: **do not translate, regenerate.** A translated line goes stiff and the timing dies. Each language is the same character thinking natively in that language, with the landings re-found. A persona's language files are siblings — `personas/<name>.en.md` and `personas/<name>.es.md` share the character, but the lines are composed fresh in each.
-
-The seams that make this cheap:
-
-- The beat sheet is language-neutral and shared (Gemini watches once).
-- Persona and language are chosen by `--persona` and `--lang`, loading `personas/<name>.<lang>.md`.
-- Scripts and audio are language-tagged (`<clip>.<lang>.script.txt`); the beat sheet is not.
-- Render treats narration as a list of tracks, so a second language appends rather than retrofits.
+English is the supported workflow today (`--lang en`, personas like `default` or your own in `personas/local/`). The pipeline is still language-tagged under the hood — beat sheet, script paths, audio tracks — so another language can come back later without a refactor, but it is not tuned or documented yet.
 
 ## Configuration
 
