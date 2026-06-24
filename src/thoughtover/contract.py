@@ -31,6 +31,12 @@ not a voice-over describing it.
 - Land it and move on. Say the thing, let it sit, back to the trail.
 - Do not narrate the soundtrack. Never name a sound ("wind noise", "tires
   skidding"); lean into the moment instead.
+- Do not recap the footage. The viewer can already see the trail, so a line that
+  states what just happened ("he let me go first", "there's a hill", "a dog
+  barks") is dead weight. React to the moment; do not announce it.
+- Skip the setup. Cut throat-clearing lead-ins and filler ("nice guy", "oh look")
+  and open on the thought itself. The line is the take, not the thing that
+  prompted it. The beat sheet is context for you, not lines to echo.
 
 The persona supplies the character on top of this: who is speaking, their wit,
 their values, their language.
