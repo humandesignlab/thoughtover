@@ -51,9 +51,17 @@ class Config(BaseSettings):
     elevenlabs_api_key: str | None = Field(default=None, alias="ELEVENLABS_API_KEY")
     elevenlabs_voice_id: str | None = Field(default=None, alias="ELEVENLABS_VOICE_ID")
     elevenlabs_model: str = Field(default="eleven_multilingual_v2", alias="ELEVENLABS_MODEL")
+    narration_speed: float = Field(default=1.0, alias="NARRATION_SPEED")
+    narration_stability: float = Field(default=0.5, alias="NARRATION_STABILITY")
+    narration_similarity: float = Field(default=0.75, alias="NARRATION_SIMILARITY")
+    narration_style: float = Field(default=0.0, alias="NARRATION_STYLE")
+    narration_speaker_boost: bool = Field(default=True, alias="NARRATION_SPEAKER_BOOST")
 
     # Output and mixing
-    narration_duck_db: float = Field(default=-12.0, alias="NARRATION_DUCK_DB")
+    narration_duck_db: float = Field(default=-8.0, alias="NARRATION_DUCK_DB")
+    narration_gain_db: float = Field(default=0.0, alias="NARRATION_GAIN_DB")
+    narration_reaction_lag: float = Field(default=0.8, alias="NARRATION_REACTION_LAG")
+    narration_duck_fade: float = Field(default=0.4, alias="NARRATION_DUCK_FADE")
 
     def require(self, *fields: str) -> None:
         """Validate that the given fields are present and non-empty.

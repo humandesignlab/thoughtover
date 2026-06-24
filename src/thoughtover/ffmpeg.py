@@ -41,8 +41,37 @@ def _iso639_2(lang: str) -> str:
     return _ISO639_2.get(lang, lang)
 
 
-def _duck_gain(duck_db: float) -> float:
-    return 10.0 ** (duck_db / 20.0)
+def _db_to_gain(db: float) -> float:
+    return 10.0 ** (db / 20.0)
+
+
+def _duck_expr(segments: list[Segment], duck_gain: float, fade: float) -> str | None:
+    """Build a time-varying volume expression that eases the trail down and back.
+
+    Each narration line gets a trapezoid envelope: ramp from full down to
+    ``duck_gain`` over ``fade`` seconds before it starts, hold while it plays,
+    then ramp back up over ``fade`` seconds after it ends. The overall gain is
+    the minimum across lines, so the trail stays ducked through close lines
+    instead of bouncing up between them.
+    """
+    if not segments:
+        return None
+    d = duck_gain
+    terms: list[str] = []
+    for s in segments:
+        a = s.start - fade            # start easing down
+        b = s.start                   # fully ducked
+        c = s.start + s.duration      # line ends, start easing up
+        e = c + fade                  # back to full
+        terms.append(
+            f"if(between(t,{a:.3f},{b:.3f}),1-(1-{d:.4f})*(t-{a:.3f})/{fade:.3f},"
+            f"if(between(t,{b:.3f},{c:.3f}),{d:.4f},"
+            f"if(between(t,{c:.3f},{e:.3f}),{d:.4f}+(1-{d:.4f})*(t-{c:.3f})/{fade:.3f},1)))"
+        )
+    expr = terms[0]
+    for term in terms[1:]:
+        expr = f"min({expr},{term})"
+    return expr
 
 
 def probe_duration(path: Path) -> float:
@@ -79,7 +108,12 @@ def _has_audio(path: Path) -> bool:
 
 
 def _build(
-    clip: Path, tracks: list[NarrationTrack], duck_db: float, video_duration: float
+    clip: Path,
+    tracks: list[NarrationTrack],
+    duck_db: float,
+    narration_gain_db: float,
+    duck_fade: float,
+    video_duration: float,
 ) -> tuple[list[str], str, list[str], list[str]]:
     """Assemble ffmpeg inputs, the filter_complex, the output maps, and metadata."""
     inputs: list[str] = ["-i", str(clip)]
@@ -111,24 +145,25 @@ def _build(
         filters.append(f"[{original}]asplit={len(tracks)}{labels}")
         bases = [f"base{ti}" for ti in range(len(tracks))]
 
-    gain = _duck_gain(duck_db)
+    duck = _db_to_gain(duck_db)
+    narration_gain = _db_to_gain(narration_gain_db)
     out_labels: list[str] = []
     metadata: list[str] = []
     for ti, track in enumerate(tracks):
-        ducks = [
-            f"volume=enable='between(t,{s.start:.3f},{s.start + s.duration:.3f})'"
-            f":volume={gain:.4f}"
-            for s in track.segments
-        ]
         ducked = f"ducked{ti}"
-        filters.append(f"[{bases[ti]}]{','.join(ducks) if ducks else 'anull'}[{ducked}]")
+        expr = _duck_expr(track.segments, duck, duck_fade)
+        if expr is None:
+            filters.append(f"[{bases[ti]}]anull[{ducked}]")
+        else:
+            filters.append(f"[{bases[ti]}]volume=eval=frame:volume='{expr}'[{ducked}]")
 
         delayed: list[str] = []
         for si, segment in enumerate(track.segments):
             delay_ms = int(round(segment.start * 1000))
             label = f"d{ti}_{si}"
             filters.append(
-                f"[{segment_input[(ti, si)]}:a]adelay={delay_ms}:all=1[{label}]"
+                f"[{segment_input[(ti, si)]}:a]adelay={delay_ms}:all=1,"
+                f"volume={narration_gain:.4f}[{label}]"
             )
             delayed.append(f"[{label}]")
 
@@ -148,13 +183,15 @@ def assemble(
     tracks: list[NarrationTrack],
     output: Path,
     duck_db: float,
+    narration_gain_db: float,
+    duck_fade: float,
     *,
     log: Callable[[str], None] = print,
 ) -> Path:
     """Render the narrated video: video copied, narration placed over ducked audio."""
     video_duration = probe_duration(clip)
     inputs, filter_complex, out_labels, metadata = _build(
-        clip, tracks, duck_db, video_duration
+        clip, tracks, duck_db, narration_gain_db, duck_fade, video_duration
     )
 
     cmd = ["ffmpeg", "-y", *inputs, "-filter_complex", filter_complex, "-map", "0:v"]

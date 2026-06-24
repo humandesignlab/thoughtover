@@ -123,12 +123,17 @@ def render(
     clip: Path = ClipArgument,
     lang: str = LangOption,
     persona: str = PersonaOption,
+    reuse_voices: bool = typer.Option(
+        False,
+        "--reuse-voices",
+        help="Reuse already-voiced lines if present (skip ElevenLabs). For tuning the mix/timing without re-billing TTS; only safe when the script is unchanged.",
+    ),
 ) -> None:
     """Render the finished video from your edited script (ElevenLabs + ffmpeg).
 
     Voices exactly the lines in the edited ``<clip>.<lang>.script.txt`` -- never
-    fresh model output -- then places each line at its timestamp, ducks the
-    trail audio underneath, and muxes to ``<clip>.<lang>.narrated.mp4``.
+    fresh model output -- then places each line a beat after its timestamp,
+    ducks the trail audio underneath, and muxes to ``<clip>.<lang>.narrated.mp4``.
     """
     from .render import render as run_render
 
@@ -155,7 +160,10 @@ def render(
     narration_dir = Path(f"{clip.with_suffix('')}.{lang}.narration")
     typer.echo(f"voicing {len(lines)} lines from {script_path} ({config.elevenlabs_model})")
     try:
-        out = run_render(clip, lines, lang, narrated, narration_dir, config, log=typer.echo)
+        out = run_render(
+            clip, lines, lang, narrated, narration_dir, config,
+            reuse_voices=reuse_voices, log=typer.echo,
+        )
     except Exception as exc:  # noqa: BLE001 - surface a clean message, not a traceback
         _fail(f"render failed: {exc}")
 

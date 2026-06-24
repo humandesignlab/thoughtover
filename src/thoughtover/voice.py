@@ -24,10 +24,19 @@ def voice_lines(
     log: Callable[[str], None] = print,
 ) -> list[Path]:
     """Voice each script line to an mp3 in ``out_dir``, returning the file paths."""
+    from elevenlabs import VoiceSettings
     from elevenlabs.client import ElevenLabs
 
     client = ElevenLabs(api_key=config.elevenlabs_api_key)
     out_dir.mkdir(parents=True, exist_ok=True)
+
+    settings = VoiceSettings(
+        stability=config.narration_stability,
+        similarity_boost=config.narration_similarity,
+        style=config.narration_style,
+        use_speaker_boost=config.narration_speaker_boost,
+        speed=config.narration_speed,
+    )
 
     paths: list[Path] = []
     total = len(lines)
@@ -38,6 +47,7 @@ def voice_lines(
             model_id=config.elevenlabs_model,
             text=line.text,
             output_format=_OUTPUT_FORMAT,
+            voice_settings=settings,
         )
         path = out_dir / f"{index:03d}.mp3"
         with open(path, "wb") as handle:
