@@ -4,6 +4,9 @@
 # Private personas, never committed or shipped
 personas/local/
 
+# Internal design doc, kept local
+SPEC.md
+
 # Python / uv
 .venv/
 __pycache__/
