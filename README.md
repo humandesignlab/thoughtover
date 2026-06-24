@@ -2,11 +2,29 @@
 
 Turn a raw mountain bike clip into a finished video narrated in your own cloned voice. An agent drafts the thoughts, **you curate them**, and your voice speaks them. The name rides on voice-over: not narration, but the inner thoughts laid over the footage.
 
-The full design lives in [SPEC.md](SPEC.md). This README is the quick start.
-
 ## Core principle
 
 Agent drafts, you curate, your voice speaks. `render` only ever voices the script file *you* edited, never fresh model output. The review step is not optional, and it is what keeps the videos sounding like you instead of like AI narration.
+
+## How it works
+
+Drop a clip, get two commands, with one editing step in between.
+
+**`draft <clip>`** produces a script for you to edit. Internally it is a hybrid of two models, kept separate and inspectable:
+
+1. **See and hear (Gemini).** The clip goes to Gemini as native video, sampled above 1 FPS so fast descents keep detail. Gemini reads the audio track alongside the frames, so the beat sheet can draw on sound too (braking, tire crunch, a passing bird). It returns a timestamped, **language-neutral** beat sheet of what happens on the trail, in no narrating voice, so it is shared across languages.
+2. **Write (Claude).** The beat sheet, the tool's narration contract, and the selected persona go to Claude, which writes sparse, first-person, timestamped thoughts in that persona's voice.
+
+**You edit the script** (`<clip>.<lang>.script.txt`) — reword, cut, retime. This is the middle step.
+
+**`render <clip>`** turns the approved script into the finished video:
+
+1. **Voice (ElevenLabs).** Each line is spoken in your cloned voice, using a multilingual model so the same voice carries across languages.
+2. **Assemble (ffmpeg).** Each line is placed a beat after its timestamp, the trail audio ducks (and eases) underneath it, and everything muxes into `<clip>.<lang>.narrated.mp4`. Render is format-agnostic: the video stream is carried through untouched, so the output keeps the input's exact dimensions and aspect ratio — a vertical 9:16 clip renders as a 9:16 short, no letterboxing or forced 16:9.
+
+### Input
+
+Thoughtover narrates the clip exactly as given. All reframing, cropping (for example wide to vertical), and trimming happen upstream in your editor, before `draft`. You feed it the locked final cut, so what the model sees matches what the viewer sees and the timestamps line up with the delivered video.
 
 ## Install
 
@@ -14,12 +32,10 @@ Requires [uv](https://docs.astral.sh/uv/) and [ffmpeg](https://ffmpeg.org/) on y
 
 ```bash
 uv sync
-cp .env.example .env   # then fill in your keys, voice id, and model ids
+cp .env.example .env   # then fill in your keys, voice id, and (optional) tuning
 ```
 
 ## Use
-
-Two commands, with one editing step in between.
 
 ```bash
 # 1. Draft: Gemini watches+hears the clip -> language-neutral beats;
@@ -36,21 +52,62 @@ uv run thoughtover render ride.mp4 --lang en
 #    -> ride.en.narrated.mp4
 ```
 
-Both commands default to `--lang en` and `--persona default`.
+Both commands default to `--lang en` and `--persona default`. `draft` reuses an existing beat sheet (Gemini watches once); pass `--refresh-beats` to re-watch. `render --reuse-voices` re-mixes without re-billing TTS, handy when tuning the mix or timing.
+
+## File formats
+
+Beat sheet, `<clip>.beats.json` (the `hear` field is optional, present when there is a useful sound cue):
+
+```json
+[
+  { "t": "00:03", "see": "loose rock in the line, front wheel skips", "hear": "tires skid on gravel" },
+  { "t": "00:09", "see": "small bird crosses the trail ahead" }
+]
+```
+
+Script, `<clip>.<lang>.script.txt` (the file you edit):
+
+```
+[00:03] ugh, that rock again
+[00:09] oh, hey, bird
+[00:21] ok this part, this is the part
+```
+
+One `[mm:ss] thought` per line. Blank lines and lines starting with `#` are ignored, so you can leave yourself notes.
 
 ## Personas
 
 Two layers, kept separate:
 
-- The **narration contract** (in `src/thoughtover/contract.py`) is the tool's craft floor, applied to every persona: sparse, short, sincere, reactive, land it and move on, don't narrate the soundtrack, `[mm:ss]` format.
-- A **persona** describes only the character. Files are `personas/<name>.<lang>.md`, selected with `--persona`.
+- The **narration contract** (in `src/thoughtover/contract.py`) is the tool's craft floor, applied to every persona: sparse, short, sincere, reactive, land it and move on, don't narrate the soundtrack, the `[mm:ss]` format. It is "how good ride narration works," and it is not the persona's job to restate it.
+- A **persona** describes only the character: who is speaking, their wit, their values, their language. Files are `personas/<name>.<lang>.md`, selected with `--persona`.
 
-`personas/default.en.md` ships as a plain template. Private personas go in `personas/local/`, which is gitignored, and are selected like any other (`--persona mine`); a local file shadows a shipped one of the same name.
+That split means a casually written persona still inherits the quality floor. `personas/default.en.md` ships as a plain template — copy it to make your own. Private personas go in `personas/local/`, which is gitignored, so your own detailed character is never committed; select it like any other (`--persona mine`), and a local file shadows a shipped one of the same name.
 
-## Status
+## Bilingual (built English-first)
 
-- Phase 1 (scaffold): done. CLI, config, persona resolution, narration contract, clear failures for missing ffmpeg/keys.
-- Phase 2 (draft): done. `draft` runs the hybrid pipeline (Gemini watches the clip once into a language-neutral `<clip>.beats.json`, then Claude writes the persona's thoughts into the editable `<clip>.<lang>.script.txt`). Re-run reuses the beat sheet; pass `--refresh-beats` to re-watch.
-- Phase 3 (render): done. `render` voices each line of the edited script in your cloned voice (ElevenLabs), then with ffmpeg places each line at its timestamp, ducks the trail audio underneath (`NARRATION_DUCK_DB`), nudges overlaps apart, and muxes to `<clip>.<lang>.narrated.mp4`. Narration is modeled as a list of audio tracks so a second language appends rather than retrofits.
+Built English-first but wired for more than one language from the start, so adding another language is a flag and a file, not a refactor.
 
-See [SPEC.md](SPEC.md) for the full plan.
+Principle: **do not translate, regenerate.** A translated line goes stiff and the timing dies. Each language is the same character thinking natively in that language, with the landings re-found. A persona's language files are siblings — `personas/<name>.en.md` and `personas/<name>.es.md` share the character, but the lines are composed fresh in each.
+
+The seams that make this cheap:
+
+- The beat sheet is language-neutral and shared (Gemini watches once).
+- Persona and language are chosen by `--persona` and `--lang`, loading `personas/<name>.<lang>.md`.
+- Scripts and audio are language-tagged (`<clip>.<lang>.script.txt`); the beat sheet is not.
+- Render treats narration as a list of tracks, so a second language appends rather than retrofits.
+
+## Configuration
+
+All config lives in `.env` (see `.env.example`); keys are never committed.
+
+- **Providers:** API keys for Gemini, Claude, and ElevenLabs, your cloned voice id, and the model names. Model ids move — verify them against each provider's current docs.
+- **Vision:** `GEMINI_VIDEO_FPS` samples above 1 FPS so fast action keeps detail.
+- **Mix:** `NARRATION_DUCK_DB` (how far the trail drops under a line), `NARRATION_GAIN_DB` (voice level), `NARRATION_REACTION_LAG` (delay so a line lands a beat after its event, not on top of it), `NARRATION_DUCK_FADE` (ease the trail down/back so it doesn't jump).
+- **Voice:** `NARRATION_SPEED`, `NARRATION_STABILITY`, `NARRATION_SIMILARITY`, `NARRATION_STYLE`, `NARRATION_SPEAKER_BOOST` mirror the ElevenLabs voice-settings sliders, passed on every request so renders are reproducible.
+
+## Scope
+
+One clip at a time, the two commands, the hybrid draft, the editable script, the voiced-and-assembled mp4. Local only.
+
+Thoughtover does not shoot, crop, reframe, or trim video — it narrates the finished clip; all editing is upstream. No web UI, no batch. If two narration lines would overlap, the later one is nudged a touch rather than mixing two voices on top of each other.
