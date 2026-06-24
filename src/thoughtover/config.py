@@ -63,6 +63,17 @@ class Config(BaseSettings):
     narration_reaction_lag: float = Field(default=0.8, alias="NARRATION_REACTION_LAG")
     narration_duck_fade: float = Field(default=0.4, alias="NARRATION_DUCK_FADE")
 
+    # Sound design (mix-stage; tune freely and re-render with --reuse-voices)
+    narration_inner_voice: bool = Field(default=True, alias="NARRATION_INNER_VOICE")
+    narration_inner_voice_reverb: float = Field(
+        default=0.15, alias="NARRATION_INNER_VOICE_REVERB"
+    )
+    ambience_highpass_hz: float = Field(default=50.0, alias="AMBIENCE_HIGHPASS_HZ")
+    ambience_carve_db: float = Field(default=-2.5, alias="AMBIENCE_CARVE_DB")
+    loudnorm: bool = Field(default=True, alias="LOUDNORM")
+    output_lufs: float = Field(default=-14.0, alias="OUTPUT_LUFS")
+    output_true_peak: float = Field(default=-1.0, alias="OUTPUT_TRUE_PEAK")
+
     def require(self, *fields: str) -> None:
         """Validate that the given fields are present and non-empty.
 

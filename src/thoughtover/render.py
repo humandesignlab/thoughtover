@@ -13,7 +13,7 @@ from collections.abc import Callable
 from pathlib import Path
 
 from .config import Config
-from .ffmpeg import NarrationTrack, Segment, assemble, probe_duration
+from .ffmpeg import MixSettings, NarrationTrack, Segment, assemble, probe_duration
 from .script import ScriptLine
 from .voice import voice_lines
 
@@ -65,12 +65,16 @@ def render(
 
     segments = plan_segments(lines, audio_paths, config.narration_reaction_lag)
     track = NarrationTrack(lang=lang, segments=segments)
-    return assemble(
-        clip,
-        [track],
-        output,
-        config.narration_duck_db,
-        config.narration_gain_db,
-        config.narration_duck_fade,
-        log=log,
+    mix = MixSettings(
+        duck_db=config.narration_duck_db,
+        narration_gain_db=config.narration_gain_db,
+        duck_fade=config.narration_duck_fade,
+        inner_voice=config.narration_inner_voice,
+        inner_voice_reverb=config.narration_inner_voice_reverb,
+        ambience_highpass_hz=config.ambience_highpass_hz,
+        ambience_carve_db=config.ambience_carve_db,
+        loudnorm=config.loudnorm,
+        output_lufs=config.output_lufs,
+        output_true_peak=config.output_true_peak,
     )
+    return assemble(clip, [track], output, mix, log=log)

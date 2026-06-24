@@ -105,6 +105,18 @@ All config lives in `.env` (see `.env.example`); keys are never committed.
 - **Vision:** `GEMINI_VIDEO_FPS` samples above 1 FPS so fast action keeps detail.
 - **Mix:** `NARRATION_DUCK_DB` (how far the trail drops under a line), `NARRATION_GAIN_DB` (voice level), `NARRATION_REACTION_LAG` (delay so a line lands a beat after its event, not on top of it), `NARRATION_DUCK_FADE` (ease the trail down/back so it doesn't jump).
 - **Voice:** `NARRATION_SPEED`, `NARRATION_STABILITY`, `NARRATION_SIMILARITY`, `NARRATION_STYLE`, `NARRATION_SPEAKER_BOOST` mirror the ElevenLabs voice-settings sliders, passed on every request so renders are reproducible.
+- **Sound design:** `NARRATION_INNER_VOICE`, `NARRATION_INNER_VOICE_REVERB`, `AMBIENCE_HIGHPASS_HZ`, `AMBIENCE_CARVE_DB`, `LOUDNORM`, `OUTPUT_LUFS`, `OUTPUT_TRUE_PEAK` — see below.
+
+## Sound design (the "thought-over" feel)
+
+This is what makes the narration feel like a *thought laid over the footage* rather than a voiceover pasted on top. It is all done at the mix stage in ffmpeg, so it costs nothing to tune — adjust the `.env` knobs and re-render with `--reuse-voices` (no TTS re-billing). The conventions follow how film and game audio treat internal monologue.
+
+- **Inner-voice treatment** (`NARRATION_INNER_VOICE`) — an "inside the head" chain on each voiced line: high-pass to clear rumble, a low-mid bell for chest/bone-conduction warmth, a high-shelf cut to de-"air" it so it reads as internal, and firm compression to keep it close and even. `NARRATION_INNER_VOICE_REVERB` (0..1) adds a very short, low slap that lifts the voice out of the open-air space; `0` stays dry (pure bone-conduction intimacy), higher leans "mental space."
+- **Ambience as content, not a music bed** — the trail audio *is* the ride, so it stays present rather than parked far down. `AMBIENCE_HIGHPASS_HZ` clears subsonic rumble; `AMBIENCE_CARVE_DB` carves a "voice pocket" (a midrange dip ~2 kHz) **only while a line is playing** (plus the duck fade padding), so the trail keeps its full tone between thoughts and opens a pocket when the voice lands.
+- **Ducking with a smooth envelope** — under each line the trail eases down by `NARRATION_DUCK_DB` and back up over `NARRATION_DUCK_FADE`, staying ducked through closely-spaced lines instead of pumping.
+- **Loudness** (`LOUDNORM`) — two-pass EBU R128 normalization: pass 1 measures integrated loudness, pass 2 applies it with `linear=true` so the mix lands on `OUTPUT_LUFS` (≈ −14 for YouTube/TikTok) with an `OUTPUT_TRUE_PEAK` ceiling. Upload-ready and consistent.
+
+The balance to aim for: the voice as the anchor (intelligible, intimate), the trail clearly present underneath, and the two separated by a carved pocket rather than brute volume.
 
 ## Scope
 
