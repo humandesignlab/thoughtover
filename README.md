@@ -95,7 +95,7 @@ All config lives in `.env` (see `.env.example`); keys are never committed.
 - **Providers:** API keys for Gemini, Claude, and ElevenLabs, your cloned voice id, and the model names. Model ids move — verify them against each provider's current docs.
 - **Vision:** `GEMINI_VIDEO_FPS` samples above 1 FPS so fast action keeps detail.
 - **Mix:** `NARRATION_DUCK_DB` (how far the trail drops under a line), `NARRATION_GAIN_DB` (voice level), `NARRATION_REACTION_LAG` (delay so a line lands a beat after its event, not on top of it), `NARRATION_DUCK_FADE` (ease the trail down/back so it doesn't jump).
-- **Voice:** `NARRATION_SPEED`, `NARRATION_STABILITY`, `NARRATION_SIMILARITY`, `NARRATION_STYLE`, `NARRATION_SPEAKER_BOOST` mirror the ElevenLabs voice-settings sliders, passed on every request so renders are reproducible.
+- **Voice:** `ELEVENLABS_MODEL` (`eleven_v3` for expressive delivery and inline audio tags; `eleven_multilingual_v2` for steadier speech). With v3, put tags in the script text itself — e.g. `[whispers]`, `[sighs]`, `[sings]` — before the words they affect; lower `NARRATION_STABILITY` (~0.35) helps tags land. `NARRATION_SPEED`, `NARRATION_SIMILARITY`, `NARRATION_STYLE`, `NARRATION_SPEAKER_BOOST` mirror the ElevenLabs sliders, passed on every request so renders are reproducible.
 - **Sound design:** `NARRATION_INNER_VOICE`, `NARRATION_INNER_VOICE_REVERB`, `AMBIENCE_HIGHPASS_HZ`, `AMBIENCE_CARVE_DB`, `LOUDNORM`, `OUTPUT_LUFS`, `OUTPUT_TRUE_PEAK` — see below.
 
 ## Sound design (the "thought-over" feel)
