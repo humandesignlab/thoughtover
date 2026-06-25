@@ -61,7 +61,7 @@ def render(
     if audio_paths is not None:
         log(f"reusing {len(audio_paths)} voiced lines from {narration_dir}")
     else:
-        audio_paths = voice_lines(lines, config, narration_dir, log=log)
+        audio_paths = voice_lines(lines, config, narration_dir, lang, log=log)
 
     segments = plan_segments(lines, audio_paths, config.narration_reaction_lag)
     track = NarrationTrack(lang=lang, segments=segments)

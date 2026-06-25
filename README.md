@@ -86,7 +86,9 @@ That split means a casually written persona still inherits the quality floor. `p
 
 ## Bilingual (English-only for now)
 
-English is the supported workflow today (`--lang en`, personas like `default` or your own in `personas/local/`). The pipeline is still language-tagged under the hood — beat sheet, script paths, audio tracks — so another language can come back later without a refactor, but it is not tuned or documented yet.
+English is the supported workflow today (`--lang en`, personas like `default` or your own in `personas/local/`). The pipeline is still language-tagged under the hood — beat sheet, script paths, narration cache, and **voice id** — so Spanish can come back without a refactor.
+
+When you do: clone a separate Spanish voice in ElevenLabs, set `ELEVENLABS_VOICE_ID_ES` in `.env`, and run `draft` / `render` with `--lang es`. English keeps `ELEVENLABS_VOICE_ID`; each language voices from its own id and its own `.<lang>.narration/` cache.
 
 ## Configuration
 
@@ -95,7 +97,7 @@ All config lives in `.env` (see `.env.example`); keys are never committed.
 - **Providers:** API keys for Gemini, Claude, and ElevenLabs, your cloned voice id, and the model names. Model ids move — verify them against each provider's current docs.
 - **Vision:** `GEMINI_VIDEO_FPS` samples above 1 FPS so fast action keeps detail.
 - **Mix:** `NARRATION_DUCK_DB` (how far the trail drops under a line), `NARRATION_GAIN_DB` (voice level), `NARRATION_REACTION_LAG` (delay so a line lands a beat after its event, not on top of it), `NARRATION_DUCK_FADE` (ease the trail down/back so it doesn't jump).
-- **Voice:** `ELEVENLABS_MODEL` (`eleven_v3` for expressive delivery and inline audio tags; `eleven_multilingual_v2` for steadier speech). With v3, put tags in the script text itself — e.g. `[whispers]`, `[sighs]`, `[sings]` — before the words they affect; lower `NARRATION_STABILITY` (~0.35) helps tags land. `NARRATION_SPEED`, `NARRATION_SIMILARITY`, `NARRATION_STYLE`, `NARRATION_SPEAKER_BOOST` mirror the ElevenLabs sliders, passed on every request so renders are reproducible.
+- **Voice:** `ELEVENLABS_VOICE_ID` (English, `--lang en`), `ELEVENLABS_VOICE_ID_ES` (Spanish, `--lang es` — required when rendering Spanish). `ELEVENLABS_MODEL` (`eleven_v3` for expressive delivery and inline audio tags; `eleven_multilingual_v2` for steadier speech). With v3, put tags in the script text itself — e.g. `[whispers]`, `[sighs]`, `[sings]` — before the words they affect; lower `NARRATION_STABILITY` (~0.35) helps tags land. `NARRATION_SPEED`, `NARRATION_SIMILARITY`, `NARRATION_STYLE`, `NARRATION_SPEAKER_BOOST` mirror the ElevenLabs sliders, passed on every request so renders are reproducible.
 - **Sound design:** `NARRATION_INNER_VOICE`, `NARRATION_INNER_VOICE_REVERB`, `AMBIENCE_HIGHPASS_HZ`, `AMBIENCE_CARVE_DB`, `LOUDNORM`, `OUTPUT_LUFS`, `OUTPUT_TRUE_PEAK` — see below.
 
 ## Sound design (the "thought-over" feel)

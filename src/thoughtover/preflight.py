@@ -38,7 +38,8 @@ def preflight_draft(config: Config) -> None:
     config.require("gemini_api_key", "anthropic_api_key")
 
 
-def preflight_render(config: Config) -> None:
+def preflight_render(config: Config, lang: str = "en") -> None:
     """Validate everything the render pipeline (ElevenLabs + ffmpeg) requires."""
     check_ffmpeg()
-    config.require("elevenlabs_api_key", "elevenlabs_voice_id")
+    config.require("elevenlabs_api_key")
+    config.voice_id_for(lang)

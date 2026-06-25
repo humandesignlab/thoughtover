@@ -50,6 +50,9 @@ class Config(BaseSettings):
     # Voice, the speaking: ElevenLabs cloned voice
     elevenlabs_api_key: str | None = Field(default=None, alias="ELEVENLABS_API_KEY")
     elevenlabs_voice_id: str | None = Field(default=None, alias="ELEVENLABS_VOICE_ID")
+    elevenlabs_voice_id_es: str | None = Field(
+        default=None, alias="ELEVENLABS_VOICE_ID_ES"
+    )
     elevenlabs_model: str = Field(default="eleven_multilingual_v2", alias="ELEVENLABS_MODEL")
     narration_speed: float = Field(default=1.0, alias="NARRATION_SPEED")
     narration_stability: float = Field(default=0.5, alias="NARRATION_STABILITY")
@@ -88,6 +91,14 @@ class Config(BaseSettings):
                 missing.append(alias)
         if missing:
             raise MissingConfigError(missing)
+
+    def voice_id_for(self, lang: str) -> str:
+        """Return the ElevenLabs voice id for ``lang``, validating it is configured."""
+        if lang == "es":
+            self.require("elevenlabs_voice_id_es")
+            return self.elevenlabs_voice_id_es  # type: ignore[return-value]
+        self.require("elevenlabs_voice_id")
+        return self.elevenlabs_voice_id  # type: ignore[return-value]
 
 
 def load_config() -> Config:

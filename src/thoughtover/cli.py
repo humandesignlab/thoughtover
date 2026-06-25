@@ -139,7 +139,7 @@ def render(
 
     config = load_config()
     try:
-        preflight_render(config)
+        preflight_render(config, lang)
     except (FfmpegMissingError, MissingConfigError) as exc:
         _fail(str(exc))
 
@@ -158,7 +158,10 @@ def render(
         _fail(f"No `[mm:ss] thought` lines found in {script_path}.")
 
     narration_dir = Path(f"{clip.with_suffix('')}.{lang}.narration")
-    typer.echo(f"voicing {len(lines)} lines from {script_path} ({config.elevenlabs_model})")
+    typer.echo(
+        f"voicing {len(lines)} lines from {script_path} "
+        f"({config.elevenlabs_model}, voice for {lang})"
+    )
     try:
         out = run_render(
             clip, lines, lang, narrated, narration_dir, config,
