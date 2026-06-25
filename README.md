@@ -19,7 +19,7 @@ Drop a clip, get two commands, with one editing step in between.
 
 **`render <clip>`** turns the approved script into the finished video:
 
-1. **Voice (ElevenLabs).** Each line is spoken in your cloned voice, using a multilingual model so the same voice carries across languages.
+1. **Voice (ElevenLabs).** Each line is spoken in the cloned voice for that language (`ELEVENLABS_VOICE_ID` for `--lang en`, `ELEVENLABS_VOICE_ID_ES` for `--lang es`), using the model set in `ELEVENLABS_MODEL`.
 2. **Assemble (ffmpeg).** Each line is placed a beat after its timestamp, the trail audio ducks (and eases) underneath it, and everything muxes into `<clip>.<lang>.narrated.mp4`. Render is format-agnostic: the video stream is carried through untouched, so the output keeps the input's exact dimensions and aspect ratio — a vertical 9:16 clip renders as a 9:16 short, no letterboxing or forced 16:9.
 
 ### Input
@@ -32,7 +32,7 @@ Requires [uv](https://docs.astral.sh/uv/) and [ffmpeg](https://ffmpeg.org/) on y
 
 ```bash
 uv sync
-cp .env.example .env   # then fill in your keys, voice id, and (optional) tuning
+cp .env.example .env   # then fill in your keys, voice id(s), and (optional) tuning
 ```
 
 ## Use
@@ -94,7 +94,7 @@ When you do: clone a separate Spanish voice in ElevenLabs, set `ELEVENLABS_VOICE
 
 All config lives in `.env` (see `.env.example`); keys are never committed.
 
-- **Providers:** API keys for Gemini, Claude, and ElevenLabs, your cloned voice id, and the model names. Model ids move — verify them against each provider's current docs.
+- **Providers:** API keys for Gemini, Claude, and ElevenLabs; cloned voice ids (`ELEVENLABS_VOICE_ID` for English, `ELEVENLABS_VOICE_ID_ES` when rendering Spanish); and the model names. Model ids move — verify them against each provider's current docs.
 - **Vision:** `GEMINI_VIDEO_FPS` samples above 1 FPS so fast action keeps detail.
 - **Mix:** `NARRATION_DUCK_DB` (how far the trail drops under a line), `NARRATION_GAIN_DB` (voice level), `NARRATION_REACTION_LAG` (delay so a line lands a beat after its event, not on top of it), `NARRATION_DUCK_FADE` (ease the trail down/back so it doesn't jump).
 - **Voice:** `ELEVENLABS_VOICE_ID` (English, `--lang en`), `ELEVENLABS_VOICE_ID_ES` (Spanish, `--lang es` — required when rendering Spanish). `ELEVENLABS_MODEL` (`eleven_v3` for expressive delivery and inline audio tags; `eleven_multilingual_v2` for steadier speech). With v3, put tags in the script text itself — e.g. `[whispers]`, `[sighs]`, `[sings]` — before the words they affect; lower `NARRATION_STABILITY` (~0.35) helps tags land. `NARRATION_SPEED`, `NARRATION_SIMILARITY`, `NARRATION_STYLE`, `NARRATION_SPEAKER_BOOST` mirror the ElevenLabs sliders, passed on every request so renders are reproducible.
