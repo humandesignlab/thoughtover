@@ -62,23 +62,25 @@ def _db_to_gain(db: float) -> float:
 
 
 def _inner_voice_chain(reverb: float) -> str:
-    """The "inside the head" treatment: warm, close, a touch dark, lightly lifted.
+    """ASMR-ish "inside the head" treatment: warm, close, dark, softly compressed.
 
-    High-pass clears rumble, a low-mid bell adds chest/bone-conduction body, the
-    high-shelf cut de-airs it so it reads as internal rather than "in the room,"
-    and firm compression keeps it intimate and even. ``reverb`` (0..1) adds a very
-    short, low slap that nudges the voice out of the open-air space; 0 stays dry.
+    Proximity = low-mid body + strong de-airing (not "in the room"). Gentle
+    compression keeps whispers and sighs intact. ``reverb`` (0..1) adds a short
+    low mental slap; 0 stays bone-conduction dry.
     """
     chain = [
-        "highpass=f=100",
-        "equalizer=f=180:width_type=q:w=1.0:g=2.5",
-        "treble=g=-4:f=4500",
-        "acompressor=threshold=-18dB:ratio=3:attack=5:release=150:makeup=3",
+        "highpass=f=80",
+        "equalizer=f=160:width_type=q:w=0.9:g=3.5",
+        "equalizer=f=320:width_type=q:w=1.2:g=1.5",
+        "treble=g=-6:f=4000",
+        "acompressor=threshold=-22dB:ratio=2:attack=3:release=200:makeup=2",
     ]
     r = max(0.0, min(reverb, 1.0))
     if r > 0:
+        wet = 0.85 + r * 0.15
         chain.append(
-            f"aecho=in_gain=1:out_gain=0.95:delays=35|50:decays={r:.3f}|{r * 0.6:.3f}"
+            f"aecho=in_gain=1:out_gain={wet:.2f}:delays=42|68:"
+            f"decays={r * 0.45:.3f}|{r * 0.28:.3f}"
         )
     return ",".join(chain)
 
@@ -228,7 +230,8 @@ def _build(
     mixed_labels: list[str] = []
     metadata: list[str] = []
     for ti, track in enumerate(tracks):
-        # Trail bed: high-pass, dynamic voice-pocket carve (speech windows only), duck.
+        # Trail bed ONLY: high-pass, timed mid carve (voice pocket), duck envelope.
+        # Never run _inner_voice_chain on the bed — that chain is narration-only.
         bed_in = bases[ti]
         hp = _ambience_highpass(mix.ambience_highpass_hz)
         if hp:
@@ -255,6 +258,7 @@ def _build(
             if inner:
                 seg_parts.append(inner)
             seg_parts.append(f"adelay={delay_ms}:all=1")
+            seg_parts.append("afade=t=in:st=0:d=0.07")
             seg_parts.append(f"volume={narration_gain:.4f}")
             filters.append(f"[{segment_input[(ti, si)]}:a]{','.join(seg_parts)}[{label}]")
             delayed.append(f"[{label}]")

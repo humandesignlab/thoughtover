@@ -17,6 +17,48 @@ from .config import Config
 
 _UPLOAD_POLL_SECONDS = 2.0
 _UPLOAD_TIMEOUT_SECONDS = 300.0
+_GENERATE_MAX_ATTEMPTS = 5
+_GENERATE_RETRY_BASE_SECONDS = 8.0
+
+
+def _is_retryable_gemini_error(exc: BaseException) -> bool:
+    """True for transient capacity/rate-limit failures from the Gemini API."""
+    code = getattr(exc, "code", None)
+    if code in {429, 500, 503, 504}:
+        return True
+    message = str(exc).upper()
+    return "UNAVAILABLE" in message or "RESOURCE_EXHAUSTED" in message or "503" in message
+
+
+def _generate_with_retry(
+    client: object,
+    *,
+    model: str,
+    contents: object,
+    config: object,
+    log: Callable[[str], None],
+) -> object:
+    """Call generate_content with backoff on transient Gemini failures."""
+    last: BaseException | None = None
+    for attempt in range(1, _GENERATE_MAX_ATTEMPTS + 1):
+        try:
+            return client.models.generate_content(
+                model=model,
+                contents=contents,
+                config=config,
+            )
+        except Exception as exc:
+            if not _is_retryable_gemini_error(exc) or attempt >= _GENERATE_MAX_ATTEMPTS:
+                raise
+            last = exc
+            wait = _GENERATE_RETRY_BASE_SECONDS * attempt
+            log(
+                f"Gemini busy ({exc}); retrying in {wait:.0f}s "
+                f"(attempt {attempt}/{_GENERATE_MAX_ATTEMPTS})..."
+            )
+            time.sleep(wait)
+    assert last is not None
+    raise last
 
 BEATS_PROMPT = """\
 You are watching a mountain-bike point-of-view trail clip, with its audio track.
@@ -76,28 +118,32 @@ def generate_beats(
         raise RuntimeError(f"Gemini upload failed (state={uploaded.state.name}).")
 
     log(f"watching at {config.gemini_video_fps} FPS with {config.gemini_model}...")
+    content = types.Content(
+        parts=[
+            types.Part(
+                file_data=types.FileData(
+                    file_uri=uploaded.uri,
+                    mime_type=uploaded.mime_type,
+                ),
+                video_metadata=types.VideoMetadata(
+                    fps=config.gemini_video_fps
+                ),
+            ),
+            types.Part(text=BEATS_PROMPT),
+        ]
+    )
+    gen_config = types.GenerateContentConfig(
+        response_mime_type="application/json",
+        response_schema=list[Beat],
+        temperature=0.4,
+    )
     try:
-        response = client.models.generate_content(
+        response = _generate_with_retry(
+            client,
             model=config.gemini_model,
-            contents=types.Content(
-                parts=[
-                    types.Part(
-                        file_data=types.FileData(
-                            file_uri=uploaded.uri,
-                            mime_type=uploaded.mime_type,
-                        ),
-                        video_metadata=types.VideoMetadata(
-                            fps=config.gemini_video_fps
-                        ),
-                    ),
-                    types.Part(text=BEATS_PROMPT),
-                ]
-            ),
-            config=types.GenerateContentConfig(
-                response_mime_type="application/json",
-                response_schema=list[Beat],
-                temperature=0.4,
-            ),
+            contents=content,
+            config=gen_config,
+            log=log,
         )
     finally:
         try:

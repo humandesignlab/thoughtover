@@ -45,7 +45,10 @@ def voice_lines(
     for index, line in enumerate(lines):
         log(f"voicing {index + 1}/{total}: [{line.t}] {line.text}")
         if config.elevenlabs_model == "eleven_v3" and "[" in line.text:
-            log("  (v3: inline tags like [whispers] or [sighs] are passed through to the model)")
+            log(
+                "  (v3: inline tags — emotion, [strong X accent], pauses — "
+                "passed through to the model)"
+            )
         audio = client.text_to_speech.convert(
             voice_id=voice_id,
             model_id=config.elevenlabs_model,

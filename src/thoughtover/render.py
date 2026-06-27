@@ -18,10 +18,34 @@ from .script import ScriptLine
 from .voice import voice_lines
 
 OVERLAP_GAP_SECONDS = 0.12
+VIDEO_END_PADDING_SECONDS = 0.08
+
+
+def _fit_segments_to_video(segments: list[Segment], video_duration: float) -> list[Segment]:
+    """Pull starts earlier so narration is not truncated at the clip end."""
+    if not segments:
+        return segments
+    out = [
+        Segment(path=s.path, start=s.start, duration=s.duration) for s in segments
+    ]
+    end_limit = video_duration - VIDEO_END_PADDING_SECONDS
+    for i in range(len(out) - 1, -1, -1):
+        seg = out[i]
+        if seg.start + seg.duration <= end_limit:
+            end_limit = seg.start - OVERLAP_GAP_SECONDS
+            continue
+        new_start = max(0.0, end_limit - seg.duration)
+        out[i] = Segment(path=seg.path, start=new_start, duration=seg.duration)
+        end_limit = new_start - OVERLAP_GAP_SECONDS
+    return out
 
 
 def plan_segments(
-    lines: list[ScriptLine], audio_paths: list[Path], reaction_lag: float = 0.0
+    lines: list[ScriptLine],
+    audio_paths: list[Path],
+    reaction_lag: float = 0.0,
+    *,
+    video_duration: float | None = None,
 ) -> list[Segment]:
     """Place each voiced line a beat after its timestamp, nudging off overlaps."""
     items = sorted(
@@ -36,6 +60,8 @@ def plan_segments(
             start = previous_end + OVERLAP_GAP_SECONDS
         segments.append(Segment(path=path, start=start, duration=duration))
         previous_end = start + duration
+    if video_duration is not None:
+        segments = _fit_segments_to_video(segments, video_duration)
     return segments
 
 
@@ -63,7 +89,12 @@ def render(
     else:
         audio_paths = voice_lines(lines, config, narration_dir, lang, log=log)
 
-    segments = plan_segments(lines, audio_paths, config.narration_reaction_lag)
+    segments = plan_segments(
+        lines,
+        audio_paths,
+        config.narration_reaction_lag,
+        video_duration=probe_duration(clip),
+    )
     track = NarrationTrack(lang=lang, segments=segments)
     mix = MixSettings(
         duck_db=config.narration_duck_db,
